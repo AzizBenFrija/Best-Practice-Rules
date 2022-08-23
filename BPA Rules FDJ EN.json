@@ -588,7 +588,7 @@
         "Severity": 1,
         "Scope": "DataColumn, CalculatedColumn, CalculatedTableColumn",
         "Expression": "UsedInRelationships.Any(ToTable.Name == current.Table.Name and ToColumn.Name == current.Name and ToCardinality == \"One\")\r\n\nand\r\n\nIsKey == false\r\nand\r\ncurrent.Table.DataCategory != \"Time\"",
-        "FixExpression": "IsKey == true",
+        "FixExpression": "IsKey = true",
         "CompatibilityLevel": 1200
     },
     {
