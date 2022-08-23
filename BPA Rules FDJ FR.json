@@ -296,57 +296,6 @@
     "CompatibilityLevel": 1200
   },
   {
-    "ID": "TRANSLATE_DESCRIPTIONS",
-    "Name": "Traduire les descriptions des objets",
-    "Category": "Mise en page du modèle",
-    "Description": "Lorsque le modèle contient une ou plusieurs cultures, tous les objets auxquels des descriptions sont appliquées doivent également avoir des descriptions traduites appliquées.",
-    "Severity": 1,
-    "Scope": "Model, Table, Measure, Hierarchy, Level, Perspective, DataColumn, CalculatedColumn, CalculatedTable, CalculatedTableColumn",
-    "Expression": "not string.IsNullOrEmpty(Description) and Model.Cultures.Any(string.IsNullOrEmpty(outerIt.TranslatedDescriptions[it]))",
-    "CompatibilityLevel": 1200
-  },
-  {
-    "ID": "LAYOUT_LOCALIZE_DF",
-    "Name": "Traduire les dossiers d'affichage",
-    "Category": "Mise en page du modèle",
-    "Description": "Les traductions du dossier d'affichage doivent être affectées aux objets auxquels la propriété DisplayFolder de base a été affectée. Sinon, les utilisateurs se connectant au modèle à l'aide d'une culture spécifique ne verront pas la structure du dossier d'affichage.",
-    "Severity": 1,
-    "Scope": "Measure, Hierarchy, DataColumn, CalculatedColumn, CalculatedTableColumn",
-    "Expression": "IsVisible\nand not string.IsNullOrEmpty(DisplayFolder)\nand Model.Cultures.Any(string.IsNullOrEmpty(outerIt.TranslatedDisplayFolders[it]))",
-    "FixExpression": "TranslatedDisplayFolders.Reset()",
-    "CompatibilityLevel": 1200
-  },
-  {
-    "ID": "TRANSLATE_HIERARCHY_LEVEL_NAMES",
-    "Name": "Traduire les niveaux de hiérarchie",
-    "Category": "Mise en page du modèle",
-    "Description": "Lorsque le modèle contient une ou plusieurs cultures, une traduction de leur nom doit être appliquée à tous les niveaux des hiérarchies visibles dans toutes les cultures.",
-    "Severity": 1,
-    "Scope": "Level",
-    "Expression": "Hierarchy.IsVisible and Model.Cultures.Any(string.IsNullOrEmpty(outerIt.TranslatedNames[it]))",
-    "CompatibilityLevel": 1200
-  },
-  {
-    "ID": "TRANSLATE_HIDEABLE_OBJECT_NAMES",
-    "Name": "Traduire les noms des objets visibles",
-    "Category": "Mise en page du modèle",
-    "Description": "Lorsque le modèle contient une ou plusieurs cultures, tous les objets visibles doivent avoir une traduction de nom fournie dans cette culture.",
-    "Severity": 1,
-    "Scope": "Table, Measure, Hierarchy, DataColumn, CalculatedColumn, CalculatedTable, CalculatedTableColumn",
-    "Expression": "IsVisible and Model.Cultures.Any(string.IsNullOrEmpty(outerIt.TranslatedNames[it]))",
-    "CompatibilityLevel": 1200
-  },
-  {
-    "ID": "TRANSLATE_OTHER_NAMES",
-    "Name": "Traduire les perspectives",
-    "Category": "Mise en page du modèle",
-    "Description": "Lorsque le modèle contient une ou plusieurs cultures, l'objet modèle du et toutes les perspectives du modèle doivent avoir un nom traduit attribué dans toutes les cultures.",
-    "Severity": 1,
-    "Scope": "Model, Perspective",
-    "Expression": "Model.Cultures.Any(string.IsNullOrEmpty(outerIt.TranslatedNames[it]))",
-    "CompatibilityLevel": 1200
-  },
-  {
     "ID": "FIX_REFERENTIAL_INTEGRITY_VIOLATIONS",
     "Name": "Corriger les violations d'intégrité référentielle",
     "Category": "Maintenance",
