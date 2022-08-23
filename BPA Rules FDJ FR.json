@@ -3,7 +3,7 @@
     "ID": "UNPIVOT_PIVOTED_(MONTH)_DATA",
     "Name": "Dépivoter les données (mois) pivotées",
     "Category": "Performance",
-    "Description": "Éviter d'utiliser des données pivotées dans les tables. Cette règle vérifie spécifiquement les données pivotées par mois.",
+    "Description": "Éviter d'utiliser des données dans les tables. Cette règle vérifie spécifiquement les données pivotées par mois.",
     "Severity": 2,
     "Scope": "Table, CalculatedTable",
     "Expression": "Columns.Any(Name.ToUpper().Contains(\"JAN\") && (DataType == DataType.Int64 || DataType == DataType.Decimal || DataType == DataType.Double))\nand\nColumns.Any(Name.ToUpper().Contains(\"FEB\") && (DataType == DataType.Int64 || DataType == DataType.Decimal || DataType == DataType.Double))\nand\nColumns.Any(Name.ToUpper().Contains(\"MAR\") && (DataType == DataType.Int64 || DataType == DataType.Decimal || DataType == DataType.Double))\nand\nColumns.Any(Name.ToUpper().Contains(\"APR\") && (DataType == DataType.Int64 || DataType == DataType.Decimal || DataType == DataType.Double))\nand\nColumns.Any(Name.ToUpper().Contains(\"MAY\") && (DataType == DataType.Int64 || DataType == DataType.Decimal || DataType == DataType.Double))\nand\nColumns.Any(Name.ToUpper().Contains(\"JUN\") && (DataType == DataType.Int64 || DataType == DataType.Decimal || DataType == DataType.Double))",
@@ -283,16 +283,6 @@
     "Scope": "DataColumn, CalculatedColumn, CalculatedTableColumn",
     "Expression": "IsVisible\nand Model.Relationships.Any(FromColumn = outerIt)",
     "FixExpression": "IsHidden = true",
-    "CompatibilityLevel": 1200
-  },
-  {
-    "ID": "LAYOUT_COLUMNS_HIERARCHIES_DF",
-    "Name": "Organiser les colonnes et les hiérarchies dans des dossiers",
-    "Category": "Mise en page du modèle",
-    "Description": "Les tables avec plus de 10 colonnes et/ou hiérarchies visibles doivent être organisées dans des dossiers d'affichage pour une meilleure utilisation.",
-    "Severity": 1,
-    "Scope": "Table",
-    "Expression": "Columns.Count(IsVisible and string.IsNullOrEmpty(DisplayFolder)) +\nHierarchies.Count(IsVisible and string.IsNullOrEmpty(DisplayFolder))\n> 10",
     "CompatibilityLevel": 1200
   },
   {
@@ -598,7 +588,7 @@
     "Severity": 1,
     "Scope": "DataColumn, CalculatedColumn, CalculatedTableColumn",
     "Expression": "UsedInRelationships.Any(ToTable.Name == current.Table.Name and ToColumn.Name == current.Name and ToCardinality == \"One\")\r\n\nand\r\n\nIsKey == false\r\nand\r\ncurrent.Table.DataCategory != \"Time\"",
-    "FixExpression": "IsKey = true",
+    "FixExpression": "IsKey == true",
     "CompatibilityLevel": 1200
   },
   {
