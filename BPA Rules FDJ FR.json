@@ -600,15 +600,5 @@
     "Scope": "Table, Measure, CalculatedTable",
     "Expression": "IsVisible\nand char.IsLower(Name[0])\nand (Model.Cultures.Count = 0 or TranslatedNames.Any(it = \"\" or it = outerIt.Name))\n",
     "CompatibilityLevel": 1200
-  },
-  {
-    "ID": "PARTITION_NAMES_SHOULD_MATCH_TABLE_NAMES",
-    "Name": "Les noms des partitions doivent correspondre aux noms de tables",
-    "Category": "Conventions de nommage",
-    "Description": "Les tables qui n'ont qu'une seule partition doivent s'assurer que la partition porte le même nom que la table. Sur les tables avec plusieurs partitions, chaque nom de partition doit commencer par le nom de la table.",
-    "Severity": 1,
-    "Scope": "Partition",
-    "Expression": "(Table.Partitions.Count = 1 and Name <> Table.Name) or \n(Table.Partitions.Count > 1 and not Name.StartsWith(Table.Name))",
-    "CompatibilityLevel": 1200
   }
 ]
