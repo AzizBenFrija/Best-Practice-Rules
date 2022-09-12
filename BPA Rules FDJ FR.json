@@ -41,7 +41,7 @@
   },
   {
     "ID": "AVOID_EXCESSIVE_BI-DIRECTIONAL_OR_MANY-TO-MANY_RELATIONSHIPS",
-    "Name": "Eviter les relations bidirectionnelles ou plusieurs à plusierus excessives",
+    "Name": "Eviter les relations bidirectionnelles ou plusieurs à plusieurs excessives",
     "Category": "Performance",
     "Description": "Limiter l'utilisation des relations bidirectionnelles et plusieurs à plusieurs. Cette règle signale le modèle si plus de 30 % des relations sont bidirectionnelles ou plusieurs à plusieurs.",
     "Severity": 2,
@@ -471,7 +471,7 @@
   },
   {
     "ID": "APPLY_FORMAT_STRING_MEASURES",
-    "Name": "Provide format string for visible numeric measures",
+    "Name": "Fournir une chaîne de format pour les mesures numériques visibles",
     "Category": "Formatage",
     "Description": "Fournir une chaîne de format pour les mesures numériques visibles.",
     "Severity": 2,
