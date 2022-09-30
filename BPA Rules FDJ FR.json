@@ -410,7 +410,7 @@
   },
   {
     "ID": "DAX_MEASURES_UNQUALIFIED",
-    "Name": "Les références de mesure doivent être non qualifiées",
+    "Name": "Les références de mesures doivent être non qualifiées",
     "Category": "Expressions DAX",
     "Description": "L'utilisation de références de mesures non qualifiées facilite la distinction entre les références de colonnes et de mesures, et permet également d'éviter certaines erreurs.",
     "Severity": 2,
