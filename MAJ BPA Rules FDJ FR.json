@@ -127,7 +127,7 @@
     "Description": "Migrez la logique de table calculée vers votre entrepôt de données. Le recours aux tables calculées entraînera une dette technique et des désalignements potentiels si vous avez plusieurs modèles sur votre plate-forme.",
     "Severity": 4,
     "Scope": "CalculatedTable",
-    "Expression": "AllTables.Where(Type.ToString() == \"Calculated\").Tables.Any(Name.ToUpper().Contains(\"DATE\") || Tables.Any(Name.ToUpper().Contains(\"CALENDRIER\")",
+    "Expression": "1=1",
     "CompatibilityLevel": 1200
   },
   {
@@ -373,7 +373,7 @@
     "Description": "Les colonnes de type \"DateHeure\" dont le nom contient \"Mois\" doivent être au format \"dd/mm/yyyy\".",
     "Severity": 3,
     "Scope": "DataColumn, CalculatedColumn, CalculatedTableColumn",
-    "Expression": "Name.IndexOf(\"Date\", \"OrdinalIgnoreCase\") >= 0 \r\nand \r\nDataType = \"Date\" \r\nand \r\nFormatString <> \"mm/dd/yyyy\"",
+    "Expression": "Name.IndexOf(\"Date\", \"OrdinalIgnoreCase\") >= 0 \r\nand \r\nDataType = \"DateTime\" \r\nand \r\nFormatString <> \"mm/dd/yyyy\"",
     "FixExpression": "FormatString = \"dd/mm/yyyy\"",
     "CompatibilityLevel": 1200
   },
@@ -384,7 +384,7 @@
     "Description": "Les colonnes numériques visibles doivent avoir leur propriété de chaîne de format affectée.",
     "Severity": 3,
     "Scope": "DataColumn, CalculatedColumn, CalculatedTableColumn",
-    "Expression": "IsVisible\nand string.IsNullOrWhitespace(FormatString)\nand (DataType = \"Int64\" or DataType = \"Date\" or DataType = \"DateTime\" or DataType = \"Double\" or DataType = \"Decimal\")\n",
+    "Expression": "IsVisible\nand string.IsNullOrWhitespace(FormatString)\nand (DataType = \"Int64\" or DataType = \"DateTime\" or DataType = \"Double\" or DataType = \"Decimal\")\n",
     "CompatibilityLevel": 1200
   },
   {
@@ -394,7 +394,7 @@
     "Description": "Fournir une chaîne de format pour les mesures numériques visibles.",
     "Severity": 3,
     "Scope": "Measure",
-    "Expression": "IsVisible\nand string.IsNullOrWhitespace(FormatString)\nand (DataType = \"Int64\" or DataType = \"Date\" or DataType = \"DateTime\" or DataType = \"Double\" or DataType = \"Decimal\")",
+    "Expression": "IsVisible\nand string.IsNullOrWhitespace(FormatString)\nand (DataType = \"Int64\" or DataType = \"DateTime\" or DataType = \"Double\" or DataType = \"Decimal\")",
     "CompatibilityLevel": 1200
   },
   {
