@@ -1,0 +1,716 @@
+[
+  {
+    "ID": "AVOID_FLOATING_POINT_DATA_TYPES",
+    "Name": "[P-01] Eviter les types de données à virgule flottante",
+    "Category": "Performance",
+    "Description": "Le type de données à virgule flottante \"Double\" doit être évité, car il peut entraîner des erreurs d'arrondi imprévisibles et une diminution des performances dans certains scénarios. Utilisez \"Int64\" ou \"Decimal\" le cas échéant (mais notez que \"Decimal\" est limité à 4 chiffres après la virgule).",
+    "Severity": 2,
+    "Scope": "DataColumn, CalculatedColumn, CalculatedTableColumn",
+    "Expression": "DataType = \"Double\"",
+    "FixExpression": "DataType = DataType.Decimal",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "SPLIT_DATE_AND_TIME_COLUMNS",
+    "Name": "[P-02] Fractionner les colonnes de date et heure",
+    "Category": "Performance",
+    "Description": "Cette règle recherche les colonnes datetime dont les valeurs ne sont pas à minuit. Pour optimiser les performances, l'élément d'heure doit être séparé de l'élément de date (ou le composant d'heure doit être arrondi à minuit car cela réduira la cardinalité des colonnes).",
+    "Severity": 2,
+    "Scope": "DataColumn, CalculatedColumn, CalculatedTableColumn",
+    "Expression": "Convert.ToInt32(GetAnnotation(\"DateTimeWithHourMinSec\")) > 0",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "INDICATE_A_DATE_TABLE_FOR_THE_MODEL",
+    "Name": "[P-03] Indiquer une table de dates dans le modèle",
+    "Category": "Performance",
+    "Description": "De manière générale, les modèles doivent avoir une table de dates. Les modèles qui n'ont pas de table de dates ne tirent généralement pas parti des fonctionnalités telles que la time intelligence et peuvent ne pas avoir une architecture correctement structurée.",
+    "Severity": 3,
+    "Scope": "Model",
+    "Expression": "Tables.Any(DataCategory == \"Time\" && Columns.Any(IsKey == true && DataType == \"DateTime\")) == false",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "REDUCE_USAGE_OF_CALCULATED_TABLES",
+    "Name": "[P-04] Réduire l'utilisation des tables calculées",
+    "Category": "Performance",
+    "Description": "Migrez la logique de table calculée vers votre entrepôt de données. Le recours aux tables calculées entraînera une dette technique et des désalignements potentiels si vous avez plusieurs modèles sur votre plateforme.",
+    "Severity": 2,
+    "Scope": "CalculatedTable",
+    "Expression": "1=1", -- si > 2
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "REMOVE_REDUNDANT_COLUMNS_IN_RELATED_TABLES",
+    "Name": "[P-05] Supprimer les colonnes redondantes dans les tables associées",
+    "Category": "Performance",
+    "Description": "Les colonnes redondantes occupent de l'espace dans le modèle et doivent être supprimées.",
+    "Severity": 2,
+    "Scope": "DataColumn, CalculatedColumn, CalculatedTableColumn",
+    "Expression": "UsedInRelationships.Any() == false \r\nand\r\nModel.AllColumns.Any(Name == current.Name and Table.Name != current.Table.Name and Table.UsedInRelationships.Any(FromTable.Name == current.Table.Name))",  -- la colonne doit être en string
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "REMOVE_DATE_TABLE_THAT_ARE_GENERATED_AUTOMATICALLY",
+    "Name": "[P-06] Supprimer les tables de date automatiquement générées",
+    "Category": "Performance",
+    "Description": "Évitez d'utiliser des tableaux de date automatique. Assurez-vous de désactiver les tables de date automatique dans les paramètres de Power BI Desktop. Cela économisera des ressources mémoire.",
+    "Severity": 3,
+    "Scope": "Table, CalculatedTable",
+    "Expression": "ObjectTypeName == \"Calculated Table\"\n\r\nand\r\n\n(\nName.StartsWith(\"DateTableTemplate_\") \n\nor \n\nName.StartsWith(\"LocalDateTable_\")\n)",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "MINIMIZE_POWER_QUERY_TRANSFORMATIONS",
+    "Name": "[P-07] Minimiser les transformations Power Query",
+    "Category": "Performance",
+    "Description": "Minimiser les transformations Power Query afin d'améliorer les performances de traitement du modèle. Il est recommandé de décharger ces transformations dans l'entrepôt de données si possible. Vérifiez également si le pliage des requêtes se produit dans votre modèle.",
+    "Severity": 2,
+    "Scope": "Partition",
+    "Expression": "\nSourceType.ToString() = \"M\"\r\nand\r\n(\r\nQuery.Contains(\"Table.Combine(\")\r\nor\r\n\nQuery.Contains(\"Table.Join(\")\r\nor\r\n\nQuery.Contains(\"Table.NestedJoin(\")\r\nor\r\nQuery.Contains(\"Table.AddColumn(\")\r\nor\r\nQuery.Contains(\"Table.Group(\")\r\nor\r\nQuery.Contains(\"Table.Sort(\")\r\nor\r\nQuery.Contains(\"Table.Pivot(\")\r\nor\r\nQuery.Contains(\"Table.Unpivot(\")\r\nor\r\nQuery.Contains(\"Table.UnpivotOtherColumns(\")\r\nor\r\nQuery.Contains(\"Table.Distinct(\")\r\nor\r\nQuery.Contains(\"[Query=\"\"SELECT\")\r\nor\r\nQuery.Contains(\"Value.NativeQuery\")\r\nor\r\nQuery.Contains(\"OleDb.Query\")\r\nor\r\nQuery.Contains(\"Odbc.Query\")\r\n)",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "REDUCE_NUMBER_OF_CALCULATED_COLUMNS",
+    "Name": "[P-09] Réduire le nombre de colonnes calculées",
+    "Category": "Performance",
+    "Description": "Les colonnes calculées ne se compressent pas aussi bien que les colonnes de données, elles occupent donc plus de mémoire. Ils ralentissent également les temps de traitement de la table et du processus de recalcul. Déchargez la logique de colonne calculée vers votre entrepôt de données et transformez ces colonnes calculées en colonnes de données.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "AllColumns.Where(Type.ToString() == \"Calculated\").Count() > 5\n\nand\n\nConvert.ToInt64(GetAnnotation(\"Vertipaq_Cardinality\")) > 100000",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "REDUCE_USAGE_OF_CALCULATED_COLUMNS_THAT_USE_THE_RELATED_FUNCTION",
+    "Name": "[P-10] Réduire l'utilisation des colonnes calculées qui utilisent la fonction RELATED",
+    "Category": "Performance",
+    "Description": "Les colonnes calculées ne se compressent pas aussi bien que les colonnes de données et peuvent entraîner des temps de traitement plus longs. En tant que telles, les colonnes calculées doivent être évitées si possible. Un scénario où elles peuvent être plus faciles à éviter est si elles utilisent la fonction RELATED.",
+    "Severity": 1,
+    "Scope": "CalculatedColumn",
+    "Expression": "RegEx.IsMatch(Expression,\"(?i)RELATED\\s*\\(\")",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "REDUCE_USAGE_OF_LONG-LENGTH_COLUMNS_WITH_HIGH_CARDINALITY",
+    "Name": "[P-11] Réduire l'utilisation des colonnes longues avec une cardinalité élevée",
+    "Category": "Performance",
+    "Description": "Il est préférable d'éviter les colonnes avec des textes longs. Cela est particulièrement vrai si la colonne contient de nombreuses valeurs uniques. Ces types de colonnes peuvent entraîner des temps de traitement plus longs, des tailles de modèle gonflées, ainsi que des requêtes utilisateur plus lentes. Un long texte est défini comme plus de 100 caractères.",
+    "Severity": 2,
+    "Scope": "DataColumn, CalculatedColumn, CalculatedTableColumn",
+    "Expression": "Convert.ToInt64(GetAnnotation(\"LongLengthRowCount\")) > 100000",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "CONSIDER_A_STAR_SCHEMA_ARCHITECTURE_INSTEAD_OF_A_SNOWFLAKE",
+    "Name": "[P-12] Envisager un schéma en étoile au lieu d'une architecture en flocon de neige",
+    "Category": "Performance",
+    "Description": "De manière générale, un schéma en étoile est l'architecture optimale pour les modèles tabulaires. Cela étant, il existe des cas valables pour utiliser une approche en flocon de neige. Veuillez vérifier votre modèle et envisager de passer à une architecture en étoile.",
+    "Severity": 2,
+    "Scope": "Table, CalculatedTable",
+    "Expression": "UsedInRelationships.Any(current.Name == FromTable.Name)\r\nand\r\nUsedInRelationships.Any(current.Name == ToTable.Name)",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "AVOID_SINGLE_ATTRIBUTE_DIMENSIONS",
+    "Name": "[P-13] Éviter les dimensions à attribut unique qui ne sont pas partagées par plusieurs faits",
+    "Category": "Performance",
+    "Description": "En général, la sur-normalisation doit être évitée. Si une dimension ne contient qu'un seul attribut et qu'elle n'est pas partagée par plusieurs faits, envisagez de déplacer l'attribut vers la table de faits.",
+    "Severity": 2,
+    "Scope": "Table",
+    "Expression": "Columns.Count(IsVisible and not UsedInRelationships.Any()) <= 1 and\nModel.Relationships.Count(ToTable = outerIt) = 1",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "AVOID_BI-DIRECTIONAL_RELATIONSHIPS_AGAINST_HIGH-CARDINALITY_COLUMNS",
+    "Name": "[P-14] Éviter les relations bidirectionnelles dans les colonnes à haute cardinalité",
+    "Category": "Performance",
+    "Description": "Pour de meilleures performances, il est recommandé d'éviter l'utilisation des relations bidirectionnelles avec des colonnes à cardinalité élevée.",
+    "Severity": 2,
+    "Scope": "DataColumn, CalculatedColumn, CalculatedTableColumn",
+    "Expression": "UsedInRelationships.Any(CrossFilteringBehavior == CrossFilteringBehavior.BothDirections)\n\nand\n\nConvert.ToInt64(GetAnnotation(\"Vertipaq_Cardinality\")) > 100000",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "AVOID_EXCESSIVE_BI-DIRECTIONAL_OR_MANY-TO-MANY_RELATIONSHIPS",
+    "Name": "[P-15] Eviter les relations bidirectionnelles ou plusieurs à plusieurs excessives",
+    "Category": "Performance",
+    "Description": "Limiter l'utilisation des relations bidirectionnelles et plusieurs à plusieurs. Cette règle signale le modèle si plus de 30 % des relations sont bidirectionnelles ou plusieurs à plusieurs.",
+    "Severity": 3,
+    "Scope": "Model",
+    "Expression": "(\r\n\nRelationships.Where(CrossFilteringBehavior == CrossFilteringBehavior.BothDirections).Count()\r\n\n+\r\n\nRelationships.Where(FromCardinality.ToString() == \"Many\" && ToCardinality.ToString() == \"Many\").Count()\r\n\n)\r\n\n\n/\r\n\n\nMath.Max(Convert.ToDecimal(Relationships.Count)\n\n,1)> 0.3",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "CHECK_IF_DYNAMIC_ROW_LEVEL_SECURITY_(RLS)_IS_NECESSARY",
+    "Name": "[P-16] Vérifier si la sécurité dynamique au niveau des lignes (RLS) est nécessaire",
+    "Category": "Performance",
+    "Description": "L'utilisation de la sécurité dynamique au niveau des lignes (RLS) peut augmenter la mémoire et les performances. Veuillez rechercher les avantages/inconvénients de son utilisation.",
+    "Severity": 2,
+    "Scope": "Table, CalculatedTable",
+    "Expression": "RegEx.IsMatch(Expression,\"(?i)USERNAME\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"(?i)USERPRINCIPALNAME\\(\")",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "CHECK_IF_BI-DIRECTIONAL_AND_MANY-TO-MANY_RELATIONSHIPS_ARE_VALID",
+    "Name": "[P-17] Vérifier si les relations bidirectionnelles et plusieurs à plusieurs sont valides",
+    "Category": "Performance",
+    "Description": "Les relations bidirectionnelles et plusieurs à plusieurs peuvent entraîner une dégradation des performances ou même entraîner des conséquences imprévues. Assurez-vous de vérifier ces relations spécifiques pour être sûrs qu'elles fonctionnent comme prévu et qu'elles sont réellement nécessaires.",
+    "Severity": 1,
+    "Scope": "Relationship",
+    "Expression": "FromCardinality.ToString() = \"Many\" and ToCardinality.ToString() = \"Many\"\r\nor\r\nCrossFilteringBehavior == CrossFilteringBehavior.BothDirections",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "REMOVE_UNUSED_COLUMNS",
+    "Name": "[P-18] Supprimer les colonnes non utilisées",
+    "Category": "Performance",
+    "Description": "Les colonnes masquées, qui n'ont aucune dépendance, ne sont utilisées dans aucune relation, ne sont utilisées dans aucune hiérarchie et ne sont pas utilisées comme SortByColumn pour d'autres colonnes, ne seront probablement pas utilisées par les clients et occupent donc un espace inutile. Envisagez de supprimer les colonnes du modèle pour économiser de l'espace et améliorer le temps de traitement, si vous êtes certain qu'aucune requête DAX ou MDX externe n'utilise les colonnes.",
+    "Severity": 1,
+    "Scope": "DataColumn, CalculatedColumn, CalculatedTableColumn",
+    "Expression": "not IsVisible\n\nand ReferencedBy.Count = 0 \n\nand (not UsedInRelationships.Any())\n\nand (not UsedInSortBy.Any())\n\nand (not UsedInHierarchies.Any())\n\nand (not UsedInVariations.Any())",
+    "FixExpression": "Delete()",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "UNPIVOT_TIME_PIVOTED_(MONTH)_DATA",
+    "Name": "[P-20] Dépivoter les données temporelles (mois)",
+    "Category": "Performance",
+    "Description": "Éviter d'utiliser des données dans les tables. Cette règle vérifie spécifiquement les données pivotées par mois.",
+    "Severity": 3,
+    "Scope": "Table, CalculatedTable",
+    "Expression": "Columns.Any(Name.ToUpper().Contains(\"JAN\") && (DataType == DataType.Int64 || DataType == DataType.Decimal || DataType == DataType.Double))\nand\nColumns.Any(Name.ToUpper().Contains(\"FEV\") && (DataType == DataType.Int64 || DataType == DataType.Decimal || DataType == DataType.Double))\nand\nColumns.Any(Name.ToUpper().Contains(\"MAR\") && (DataType == DataType.Int64 || DataType == DataType.Decimal || DataType == DataType.Double))\nand\nColumns.Any(Name.ToUpper().Contains(\"APR\") && (DataType == DataType.Int64 || DataType == DataType.Decimal || DataType == DataType.Double))\nand\nColumns.Any(Name.ToUpper().Contains(\"MAY\") && (DataType == DataType.Int64 || DataType == DataType.Decimal || DataType == DataType.Double))\nand\nColumns.Any(Name.ToUpper().Contains(\"JUN\") && (DataType == DataType.Int64 || DataType == DataType.Decimal || DataType == DataType.Double))\nand\nColumns.Any(Name.ToUpper().Contains(\"JUL\") && (DataType == DataType.Int64 || DataType == DataType.Decimal || DataType == DataType.Double))\nand\nColumns.Any(Name.ToUpper().Contains(\"AOU\") && (DataType == DataType.Int64 || DataType == DataType.Decimal || DataType == DataType.Double))\nand\nColumns.Any(Name.ToUpper().Contains(\"SEP\") && (DataType == DataType.Int64 || DataType == DataType.Decimal || DataType == DataType.Double))\nand\nColumns.Any(Name.ToUpper().Contains(\"OCT\") && (DataType == DataType.Int64 || DataType == DataType.Decimal || DataType == DataType.Double))\nand\nColumns.Any(Name.ToUpper().Contains(\"NOV\") && (DataType == DataType.Int64 || DataType == DataType.Decimal || DataType == DataType.Double))\nand\nColumns.Any(Name.ToUpper().Contains(\"DEC\") && (DataType == DataType.Int64 || DataType == DataType.Decimal || DataType == DataType.Double))",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "DISABLE_ATTRIBUTE_HIERACHIES_TO_REDUCE_PROCESSING",
+    "Name": "[P-21] Désactiver les hiérarchies d'attributs pour réduire les traitements",
+    "Category": "Performance",
+    "Description": "Désactiver les hiérarchies d'attributs pour les colonnes masquées. Cela garantira un traitement plus rapide.",
+    "Severity": 2,
+    "Scope": "DataColumn",
+    "Expression": "not IsVisible\nand IsAvailableInMDX\nand not UsedInHierarchies.Any()\nand not UsedInVariations.Any()\nand not UsedInSortBy.Any()",
+    "FixExpression": "IsAvailableInMDX = false",
+    "CompatibilityLevel": 1400
+  },
+  {
+    "ID": "MARK_PRIMARY_KEYS_IN_TABLES",
+    "Name": "[P-22] Marquer les clés primaires dans les tables",
+    "Category": "Performance",
+    "Description": "Définir la propriété 'Key' sur 'True' pour les colonnes de clé primaire dans les propriétés de colonne.",
+    "Severity": 3,
+    "Scope": "DataColumn, CalculatedColumn, CalculatedTableColumn",
+    "Expression": "UsedInRelationships.Any(ToTable.Name == current.Table.Name and ToColumn.Name == current.Name and ToCardinality == \"One\")\r\n\nand\r\n\nIsKey == false\r\nand\r\ncurrent.Table.DataCategory != \"Time\"",
+    "FixExpression": "IsKey = true",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "ENSURE_THAT_RELATIONSHIP_COLUMNS_ARE_NOT_OF_STRING_DATA_TYPE",
+    "Name": "[P-23] S'assurer que les colonnes de relations ne sont pas de type texte",
+    "Category": "Performance",
+    "Description": "Il est recommandé que les colonnes de relations soient de type entier. Cela s'applique non seulement à l'entreposage de données, mais également à la modélisation des données. Il est également toléré de faire des relations de type Date entre les tables.",
+    "Severity": 2,
+    "Scope": "DataColumn, CalculatedColumn, CalculatedTableColumn",
+    "Expression": "UsedInRelationships.Any()\n\nand\n\nDataType == DataType.String",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "LARGE_TABLES_SHOULD_BE_PARTITIONED",
+    "Name": "[P-24] Les tables volumineuses doivent être partitionnées",
+    "Category": "Performance",
+    "Description": "Afin d'optimiser le modèle, les tables volumineuses doivent être partiotionnées.",
+    "Severity": 2,
+    "Scope": "Table",
+    "Expression": "Convert.ToInt64(GetAnnotation(\"Vertipaq_RowCount\")) > 25000000\r\nand\r\nPartitions.Count = 1",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "MODEL_USING_DIRECT_QUERY_AND_NO_AGGREGATIONS",
+    "Name": "[P-25] Envisager d'utiliser des agrégations dans un modèle en Direct Query",
+    "Category": "Performance",
+    "Description": "Dans le cas où l'on utilise une connexion Direct Query sur Power BI Premium, les agrégations sont nécessaires et permettent de booster la performance du jeu de données.",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "Tables.Any(ObjectTypeName == \"Table (DirectQuery)\")\r\nand\r\n\n\nAllColumns.Any(AlternateOf != null) == false\r\nand \r\nDefaultPowerBIDataSourceVersion.ToString() == \"PowerBI_V3\"",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "LIMIT_ROW_LEVEL_SECURITY_(RLS)_LOGIC",
+    "Name": "[P-26] Limiter la logique de sécurité au niveau des lignes (RLS)",
+    "Category": "Performance",
+    "Description": "Il faut essayer de simplifier le DAX utilisé pour la sécurité au niveau des lignes. L'utilisation des fonctions au sein de cette règle peut probablement être déchargée sur les systèmes en amont (entrepôt de données).",
+    "Severity": 2,
+    "Scope": "Table, CalculatedTable",
+    "Expression": "RowLevelSecurity.Any(RegEx.IsMatch(it.Replace(\" \",\"\"),\"(?i)RIGHT\\s*\\(\"))\r\nor\r\nRowLevelSecurity.Any(RegEx.IsMatch(it.Replace(\" \",\"\"),\"(?i)LEFT\\s*\\(\"))\r\nor\r\nRowLevelSecurity.Any(RegEx.IsMatch(it.Replace(\" \",\"\"),\"(?i)UPPER\\s*\\(\"))\r\nor\r\nRowLevelSecurity.Any(RegEx.IsMatch(it.Replace(\" \",\"\"),\"(?i)LOWER\\s*\\(\"))\r\nor\r\nRowLevelSecurity.Any(RegEx.IsMatch(it.Replace(\" \",\"\"),\"(?i)FIND\\s*\\(\"))\r\n",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "MANY-TO-MANY_RELATIONSHIPS_SHOULD_BE_SINGLE-DIRECTION",
+    "Name": "[P-27] Les relations plusieurs à plusieurs doivent être à sens unique",
+    "Category": "Performance",
+    "Description": "Le fait de mettre des relations plusieurs à plusieurs à double sens ralentit les performances.",
+    "Severity": 2,
+    "Scope": "Relationship",
+    "Expression": "FromCardinality == \"Many\"\nand\nToCardinality == \"Many\"\nand\nCrossFilteringBehavior == \"BothDirections\"",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "MEASURES_USING_TIME_INTELLIGENCE_AND_MODEL_IS_USING_DIRECT_QUERY",
+    "Name": "[P-28] Eviter l'utilisation de fonctions de time intelligence sur un modèle en Direct Query",
+    "Category": "Performance",
+    "Description": "Les fonctions de time intelligence sont connues pour ne pas fonctionner aussi bien sur un modèle en Direct Query. Si tel est le cas et qu'on rencontre des problèmes de performance, il est possible de recourir à des solutions alternatives telles que l'ajout de colonnes dans la table de faits qui affichent les données de l'année précédente ou du mois précédent.",
+    "Severity": 2,
+    "Scope": "Measure, CalculationItem",
+    "Expression": "Model.Tables.Any(ObjectTypeName == \"Table (DirectQuery)\")\r\nand\r\n(\r\nRegEx.IsMatch(Expression,\"CLOSINGBALANCEMONTH\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"CLOSINGBALANCEQUARTER\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"CLOSINGBALANCEYEAR\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"DATEADD\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"DATESBETWEEN\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"DATESINPERIOD\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"DATESMTD\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"DATESQTD\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"DATESYTD\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"ENDOFMONTH\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"ENDOFQUARTER\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"ENDOFYEAR\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"FIRSTDATE\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"FIRSTNONBLANK\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"FIRSTNONBLANKVALUE\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"LASTDATE\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"LASTNONBLANK\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"LASTNONBLANKVALUE\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"NEXTDAY\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"NEXTMONTH\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"NEXTQUARTER\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"NEXTYEAR\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"OPENINGBALANCEMONTH\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"OPENINGBALANCEQUARTER\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"OPENINGBALANCEYEAR\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"PARALLELPERIOD\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"PREVIOUSDAY\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"PREVIOUSMONTH\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"PREVIOUSQUARTER\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"PREVIOUSYEAR\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"SAMEPERIODLASTYEAR\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"STARTOFMONTH\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"STARTOFQUARTER\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"STARTOFYEAR\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"TOTALMTD\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"TOTALQTD\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"TOTALYTD\\s*\\(\")\r\n)",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE",
+    "Name": "[P-29] Les tables de date/calendrier doivent être marquées comme tables de date",
+    "Category": "Performance",
+    "Description": "Cette règle recherche les tables qui contiennent les mots 'date' ou 'calendrier' puisqu'elles doivent être marquées comme tables de date pour bénéficier au mieux des fonctions de time intelligence.",
+    "Severity": 2,
+    "Scope": "Table, CalculatedTable",
+    "Expression": "(Name.ToUpper().Contains(\"DATE\") or Name.ToUpper().Contains(\"CALENDRIER\"))\n\nand\n\n(\nDataCategory <> \"Time\"\n\nor\n\nColumns.Any(IsKey == true && DataType == \"DateTime\") == false\n)",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "AVOID_USING_'1-(X/Y)'_SYNTAX",
+    "Name": "[P-30] Eviter l'utilisation de la syntaxe '1-(x/y)'",
+    "Category": "Performance",
+    "Description": "Au lieu d'utiliser la syntaxe '1-(x/y)' ou '1+(x/y)' pour obtenir un calcul de pourcentage, il vaut mieux utiliser les fonctions DAX de base. L'utilisation de la syntaxe améliorée permet généralement d'améliorer également les performances. La syntaxe '1+/-...' renvoie toujours une valeur alors que la solution sans '1+/-...' ne le fait pas (car la valeur peut être 'vide'). Par conséquent, la syntaxe '1+/-...' peut renvoyer plus de lignes/colonnes, ce qui peut entraîner une vitesse de requête plus lente.",
+    "Severity": 2,
+    "Scope": "Measure, CalculatedColumn, CalculationItem",
+    "Expression": "RegEx.IsMatch(Expression,\"[0-9]+\\s*[-+]\\s*[\\(]*\\s*(?i)SUM\\s*\\(\\s*\\'*[A-Za-z0-9 _]+\\'*\\s*\\[[A-Za-z0-9 _]+\\]\\s*\\)\\s*\\/\")\r\nor\r\nRegEx.IsMatch(Expression,\"[0-9]+\\s*[-+]\\s*(?i)DIVIDE\\s*\\(\")",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "FILTER_MEASURE_VALUES_BY_COLUMNS",
+    "Name": "[P-31] Filtrer les valeurs de mesure par colonnes et non par tables",
+    "Category": "Performance",
+    "Description": "Au lieu d'utiliser la fonction FILTER('Table',[Mesure]>Valeur) pour les paramètres de filtre d'une fonction CALCULATE ou CALCULATETABLE, il vaut mieux utiliser l'une des options ci-dessous (si possible). Le filtrage sur une colonne spécifique produit une table plus petite à traiter par le moteur, permettant ainsi de meilleures performances. L'utilisation de la fonction VALUES ou de la fonction ALL dépend du résultat de mesure souhaité.\r\n\r\nOption 1 : FILTER(VALUES('Table'[Colonne]),[Mesure] > Value)\r\nOption 2 : FILTER (ALL('Table'[Colonne]),[Mesure] > Valeur).",
+    "Severity": 3,
+    "Scope": "Measure, CalculatedColumn, CalculationItem",
+    "Expression": "RegEx.IsMatch(Expression,\"(?i)CALCULATE\\s*\\(\\s*[^,]+,\\s*(?i)FILTER\\s*\\(\\s*\\'*[A-Za-z0-9 _]+\\'*\\s*,\\s*\\[[^\\]]+\\]\")\r\nor\r\nRegEx.IsMatch(Expression,\"(?i)CALCULATETABLE\\s*\\([^,]*,\\s*(?i)FILTER\\s*\\(\\s*\\'*[A-Za-z0-9 _]+\\'*,\\s*\\[\")",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "META_SUMMARIZE_NONE",
+    "Name": "[M-01] Ne pas résumer les colonnes numériques",
+    "Category": "Maintenabilité",
+    "Description": "Définir la propriété SummarizeBy de toutes les colonnes numériques visibles sur \"None\", pour éviter une agrégation involontaire dans les outils clients. Créer des mesures pour les colonnes censées être récapitulées.",
+    "Severity": 3,
+    "Scope": "DataColumn, CalculatedColumn, CalculatedTableColumn",
+    "Expression": "IsVisible\nand SummarizeBy <> \"None\"\nand (DataType = \"Double\" or DataType = \"Decimal\" or DataType = \"Int64\")",
+    "FixExpression": "SummarizeBy = AggregateFunction.None",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "USE_THE_DIVIDE_FUNCTION_FOR_DIVISION",
+    "Name": "[M-02] Utiliser la fonction DIVIDE pour les divisions",
+    "Category": "Maintenabilité",
+    "Description": "Utiliser la fonction DIVIDE au lieu de d'utiliser \"/\". La fonction DIVIDE résoud les cas de division par zéro. En tant que tel, il est recommandé de l'utiliser pour éviter les erreurs.",
+    "Severity": 3,
+    "Scope": "Measure, CalculatedColumn, CalculatedTable",
+    "Expression": "RegEx.IsMatch(Expression,\"\\]\\s*\\/(?!\\/)(?!\\*)\")\r\nor\r\nRegEx.IsMatch(Expression,\"\\)\\s*\\/(?!\\/)(?!\\*)\")",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "FILTER_COLUMN_VALUES_WITH_THE_RIGHT_SYNTHAX",
+    "Name": "[M-03] Filtrer les valeurs de colonne avec la syntaxe appropriée",
+    "Category": "Maintenabilité",
+    "Description": "Au lieu d'utiliser le modèle FILTER('Table','Table'[Colonne]=\"Valeur\") pour les paramètres de filtre d'une fonction CALCULATE ou CALCULATETABLE, utiliser l'une des options ci-dessous. \r\n\r\nOption 1: KEEPFILTERS('Table'[Colonne]=\"Valeur\")\r\nOption 2: 'Table'[Colonne]=\"Valeur\".",
+    "Severity": 2,
+    "Scope": "Measure, CalculatedColumn, CalculationItem",
+    "Expression": "RegEx.IsMatch(Expression,\"(?i)CALCULATE\\s*\\(\\s*[^,]+,\\s*(?i)FILTER\\s*\\(\\s*\\'*[A-Za-z0-9 _]+'*\\s*,\\s*\\'*[A-Za-z0-9 _]+\\'*\\[[A-Za-z0-9 _]+\\]\")\r\nor\r\nRegEx.IsMatch(Expression,\"(?i)CALCULATETABLE\\s*\\([^,]*,\\s*(?i)FILTER\\s*\\(\\s*\\'*[A-Za-z0-9 _]+\\'*,\\s*\\'*[A-Za-z0-9 _]+\\'*\\[[A-Za-z0-9 _]+\\]\")",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "DELETE_MEASURES_THAT_ARE_DIRECT_REFERENCES_OF_OTHER_MEASURES",
+    "Name": "[M-04] Supprimer les mesures qui sont des références directes à d'autres mesures",
+    "Category": "Maintenabilité",
+    "Description": "Cette règle identifie les mesures qui sont simplement une référence à une autre mesure. À titre d'exemple, considérons un modèle avec deux mesures : [MeasureA] et [MeasureB]. Cette règle serait déclenchée pour MeasureB si le DAX de MeasureB était MeasureB:=[MeasureA]. Ces mesures redondantes devraient être supprimées.",
+    "Severity": 3,
+    "Scope": "Measure",
+    "Expression": "Model.AllMeasures.Any(DaxObjectName == current.Expression)",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "ENSURE_THAT_COLUMN_REFERENCES_ARE_ALWAYS_FULLY_QUALIFIED",
+    "Name": "[M-05] S'assurer que les références de colonnes sont toujours entièrement qualifiées",
+    "Category": "Maintenabilité",
+    "Description": "L'utilisation de références de colonnes entièrement qualifiées facilite la distinction entre les références de colonnes et de mesures, et permet également d'éviter certaines erreurs.",
+    "Severity": 3,
+    "Scope": "Measure, CalculatedColumn, CalculatedTable, KPI",
+    "Expression": "DependsOn.Any(Key.ObjectType = \"Column\" and Value.Any(not FullyQualified))",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "ENSURE_THAT_MEASURE_REFERENCES_ARE_NEVER_QUALIFIED",
+    "Name": "[M-06] S'assurer que les références de mesures ne sont jamais qualifiées",
+    "Category": "Maintenabilité",
+    "Description": "Cette règle identifie les mesures qui sont simplement une référence à une autre mesure. À titre d'exemple, considérons un modèle avec deux mesures : [MeasureA] et [MeasureB]. Cette règle serait déclenchée pour MeasureB si le DAX de MeasureB était MeasureB:=[MeasureA]. Ces mesures redondantes devraient être supprimées.",
+    "Severity": 3,
+    "Scope": "Measure",
+    "Expression": "Model.AllMeasures.Any(DaxObjectName == current.Expression)",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "DELETE_INACTIVE_RELATIONSHIPS_THAT_ARE_NEVER_ACTIVATED",
+    "Name": "[M-07] Supprimer les relations inactives qui ne sont jamais activées",
+    "Category": "Maintenabilité",
+    "Description": "Les relations inactives sont activées à l'aide de la fonction USERELATIONSHIP. Si une relation inactive n'est référencée dans aucune mesure via cette fonction, la relation ne sera pas utilisée. Il convient de déterminer si la relation n'est pas nécessaire ou d'activer la relation via cette méthode.",
+    "Severity": 3,
+    "Scope": "Relationship",
+    "Expression": "IsActive == false\r\nand not\r\n(\r\nModel.AllMeasures.Any(RegEx.IsMatch(Expression,\r\n\"(?i)USERELATIONSHIP\\s*\\(\\s*\\'*\" +\r\ncurrent.FromTable.Name + \"\\'*\\[\" + \r\ncurrent.FromColumn.Name + \"\\]\\s*,\\s*\\'*\" +\r\ncurrent.ToTable.Name + \"\\'*\\[\" +\r\ncurrent.ToColumn.Name + \"\\]\"))\r\nor\r\nModel.AllCalculationItems.Any(RegEx.IsMatch(Expression,\r\n\"(?i)USERELATIONSHIP\\s*\\(\\s*\\'*\" +\r\ncurrent.FromTable.Name + \"\\'*\\[\" + \r\ncurrent.FromColumn.Name + \"\\]\\s*,\\s*\\'*\" +\r\ncurrent.ToTable.Name + \"\\'*\\[\" +\r\ncurrent.ToColumn.Name + \"\\]\"))\r\n)",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "HIDE_FOREIGN_KEY_COLUMNS",
+    "Name": "[M-09] Masquer les colonnes de clés étrangères",
+    "Category": "Maintenabilité",
+    "Description": "Les colonnes utilisées du côté plusieurs d'une relation doivent être masquées, car la table (de dimension) associée est probablement le meilleur endroit pour appliquer un contexte de filtre.",
+    "Severity": 3,
+    "Scope": "DataColumn, CalculatedColumn, CalculatedTableColumn",
+    "Expression": "IsVisible\nand Model.Relationships.Any(FromColumn = outerIt)",
+    "FixExpression": "IsHidden = true",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "HIDE_FACT_TABLE_COLUMNS",
+    "Name": "[M-10] Masquer les colonnes des tables de faits",
+    "Category": "Maintenabilité",
+    "Description": "Il est recommandé de masquer les colonnes de tables de faits utilisées pour l'agrégation dans les mesures.",
+    "Severity": 2,
+    "Scope": "DataColumn, CalculatedColumn, CalculatedTableColumn",
+    "Expression": "(\r\nReferencedBy.AllMeasures.Any(RegEx.IsMatch(Expression,\"(?i)COUNT\\s*\\(\\s*\\'*\" + outerit.Table.Name + \"\\'*\\[\" + outerit.Name + \"\\]\\s*\\)\"))\r\n\nor\r\nReferencedBy.AllMeasures.Any(RegEx.IsMatch(Expression,\"(?i)COUNTBLANK\\s*\\(\\s*\\'*\" + outerit.Table.Name + \"\\'*\\[\" + outerit.Name + \"\\]\\s*\\)\"))\r\n\nor\r\nReferencedBy.AllMeasures.Any(RegEx.IsMatch(Expression,\"(?i)SUM\\s*\\(\\s*\\'*\" + outerit.Table.Name + \"\\'*\\[\" + outerit.Name + \"\\]\\s*\\)\"))\r\nor\r\nReferencedBy.AllMeasures.Any(RegEx.IsMatch(Expression,\"(?i)AVERAGE\\s*\\(\\s*\\'*\" + outerit.Table.Name + \"\\'*\\[\" + outerit.Name + \"\\]\\s*\\)\"))\r\n\nor\r\nReferencedBy.AllMeasures.Any(RegEx.IsMatch(Expression,\"(?i)VALUES\\s*\\(\\s*\\'*\" + outerit.Table.Name + \"\\'*\\[\" + outerit.Name + \"\\]\\s*\\)\"))\r\n\nor\r\nReferencedBy.AllMeasures.Any(RegEx.IsMatch(Expression,\"(?i)DISTINCT\\s*\\(\\s*\\'*\" + outerit.Table.Name + \"\\'*\\[\" + outerit.Name + \"\\]\\s*\\)\"))\r\nor\r\nReferencedBy.AllMeasures.Any(RegEx.IsMatch(Expression,\"(?i)DISTINCTCOUNT\\s*\\(\\s*\\'*\" + outerit.Table.Name + \"\\'*\\[\" + outerit.Name + \"\\]\\s*\\)\"))\r\n\nor\n\r\nReferencedBy.AllMeasures.Any(RegEx.IsMatch(Expression,\"(?i)MIN\\s*\\(\\s*\\'*\" + outerit.Table.Name + \"\\'*\\[\" + outerit.Name + \"\\]\\s*\\)\"))\r\n\nor\n\r\nReferencedBy.AllMeasures.Any(RegEx.IsMatch(Expression,\"(?i)MAX\\s*\\(\\s*\\'*\" + outerit.Table.Name + \"\\'*\\[\" + outerit.Name + \"\\]\\s*\\)\"))\r\n\nor\r\nReferencedBy.AllMeasures.Any(RegEx.IsMatch(Expression,\"(?i)COUNTA\\s*\\(\\s*\\'*\" + outerit.Table.Name + \"\\'*\\[\" + outerit.Name + \"\\]\\s*\\)\"))\n\r\n\nor\r\nReferencedBy.AllMeasures.Any(RegEx.IsMatch(Expression,\"(?i)AVERAGEA\\s*\\(\\s*\\'*\" + outerit.Table.Name + \"\\'*\\[\" + outerit.Name + \"\\]\\s*\\)\"))\r\n\nor\r\nReferencedBy.AllMeasures.Any(RegEx.IsMatch(Expression,\"(?i)MAXA\\s*\\(\\s*\\'*\" + outerit.Table.Name + \"\\'*\\[\" + outerit.Name + \"\\]\\s*\\)\"))\r\n\nor\r\nReferencedBy.AllMeasures.Any(RegEx.IsMatch(Expression,\"(?i)MINA\\s*\\(\\s*\\'*\" + outerit.Table.Name + \"\\'*\\[\" + outerit.Name + \"\\]\\s*\\)\"))\r\n)\r\n\nand IsHidden == false\r\n\nand (DataType == \"Int64\" || DataType == \"Decimal\" || DataType == \"Double\")",
+    "FixExpression": "IsHidden = true",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "FIX_REFERENTIAL_INTEGRITY_VIOLATIONS",
+    "Name": "[M-12] Corriger les violations d'intégrité référentielle",
+    "Category": "Maintenabilité",
+    "Description": "Cette règle met en évidence les relations qui ont des violations d'intégrité référentielle. Cela indique qu'il y a des valeurs dans la table du côté 'from' de la relation qui n'existent pas dans la table du côté 'to' de la relation. Les violations d'intégrité référentielle produiront également la valeur 'blank' dans les segments. Il est recommandé de résoudre ces problèmes en s'assurant que la colonne de clé primaire de la table 'to' contient toutes les valeurs de la colonne de clé étrangère de la table 'from'.",
+    "Severity": 3,
+    "Scope": "Relationship",
+    "Expression": "Convert.ToInt64(GetAnnotation(\"Vertipaq_RIViolationInvalidRows\")) > 0",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "ADD_DATA_CATEGORY_FOR_COLUMNS",
+    "Name": "[M-14] Ajouter une catégorie de données pour les colonnes",
+    "Category": "Maintenabilité",
+    "Description": "Ajouter la propriété de catégorie de données pour les colonnes appropriées.",
+    "Severity": 2,
+    "Scope": "DataColumn, CalculatedColumn, CalculatedTableColumn",
+    "Expression": "string.IsNullOrWhitespace(DataCategory)\r\nand\r\n(\r\n(\r\nName.ToLower().Contains(\"pays\")\r\nor \r\n\nName.ToLower().Contains(\"continent\"\n)\r\nor\r\nName.ToLower().Contains(\"ville\")\r\n)\r\nand DataType == \"String\"\r\n)\r\nor \r\n(\r\n(\nName.ToLower() == \"latitude\" \n or \nName.ToLower() == \"longitude\")\r\nand (DataType == DataType.Decimal or DataType == DataType.Double)\r\n)",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "AVOID_USING_THE_IFERROR_FUNCTION",
+    "Name": "[M-15] Eviter l'utilisation de la fonction IFERROR",
+    "Category": "Maintenabilité",
+    "Description": "Éviter d'utiliser la fonction IFERROR car elle peut entraîner une dégradation des performances. Si vous êtes préoccupé par une erreur de division par zéro, utilisez la fonction DIVIDE car elle résout naturellement les erreurs telles que les blanks (ou vous pouvez personnaliser ce qui doit être affiché en cas d'une telle erreur).",
+    "Severity": 3,
+    "Scope": "Measure, CalculatedColumn",
+    "Expression": "RegEx.IsMatch(Expression,\"(?i)IFERROR\\s*\\(\")",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "USE_THE_TREATAS_FUNCTION_INSTEAD_OF_INTERSECT",
+    "Name": "[M-16] Utiliser la fonction TREATAS au lieu de la fonction INTERSECT pour les relations virtuelles",
+    "Category": "Maintenabilité",
+    "Description": "La fonction TREATAS est plus efficace et offre de meilleures performances que la fonction INTERSECT lorsqu'elle est utilisée dans des relations virtuelles.",
+    "Severity": 3,
+    "Scope": "Measure, CalculationItem",
+    "Expression": "RegEx.IsMatch(Expression,\"(?i)INTERSECT\\s*\\(\")",
+    "CompatibilityLevel": 1400
+  },
+  {
+    "ID": "AVOID_THE_USERELATIONSHIP_FUNCTION_AND_RLS_AGAINST_THE_SAME_TABLE",
+    "Name": "[M-17] Éviter la fonction USERELATIONSHIP et le RLS sur une même table",
+    "Category": "Maintenabilité",
+    "Description": "La fonction USERELATIONSHIP ne peut pas être utilisée sur une table qui exploite également la sécurité au niveau des lignes (RLS). Cela générera une erreur lors de l'utilisation de la mesure particulière dans un visuel. Cette règle mettra en surbrillance la table qui est utilisée dans la fonction USERELATIONSHIP d'une mesure ainsi que RLS.",
+    "Severity": 3,
+    "Scope": "Table, CalculatedTable",
+    "Expression": "Model.AllMeasures.Any(RegEx.IsMatch(Expression,\"(?i)USERELATIONSHIP\\s*\\(\\s*.+?(?=])\\]\\s*,\\s*'*\" + current.Name + \"'*\\[\"))\r\nand\r\nRowLevelSecurity.Any(it <> null)",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "ENSURE_THAT_DATA_COLUMNS_HAVE_A_SOURCE_COLUMN",
+    "Name": "[M-18] S'assurer que les colonnes de données ont une colonne source",
+    "Category": "Maintenabilité",
+    "Description": "Les colonnes de données doivent avoir une colonne source. Une colonne de données sans colonne source entraînera une erreur lors du traitement du modèle.",
+    "Severity": 2,
+    "Scope": "DataColumn",
+    "Expression": "string.IsNullOrWhitespace(SourceColumn)",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "DELETE_CALCULATION_GROUPS_WITH_NO_CALCULATION_ITEMS",
+    "Name": "[M-19] Supprimer les groupes de calcul sans éléments de calcul",
+    "Category": "Maintenabilité",
+    "Description": "Les groupes de calcul n'ont de fonction que s'ils contiennent des éléments de calcul.",
+    "Severity": 2,
+    "Scope": "CalculationGroup",
+    "Expression": "CalculationItems.Count == 0",
+    "FixExpression": "Delete()",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "REMOVE_ROLES_WITH_NO_MEMBERS",
+    "Name": "[M-20] Supprimer les rôles sans membres",
+    "Category": "Maintenabilité",
+    "Description": "Les rôles sans membres doivent être supprimés du modèle de données.",
+    "Severity": 1,
+    "Scope": "ModelRole",
+    "Expression": "Members.Count() == 0",
+    "FixExpression": "Delete()",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "RELATIONSHIP_COLUMNS_SAME_DATA_TYPE",
+    "Name": "[M-21] Les colonnes utilisées dans les relations doivent avoir le même type de données",
+    "Category": "Maintenabilité",
+    "Description": "Les colonnes utilisées des deux côtés d'une relation doivent être du même type de données. Idéalement, elles doivent être de type entier.",
+    "Severity": 3,
+    "Scope": "Relationship",
+    "Expression": "FromColumn.DataType != ToColumn.DataType",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "REMOVE_UNNECESSARY_MEASURES",
+    "Name": "[M-22] Supprimer les mesures inutiles",
+    "Category": "Maintenabilité",
+    "Description": "Les mesures masquées qui ne sont référencées par aucune expression DAX doivent être supprimées.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "(Table.IsHidden or IsHidden) \r\nand ReferencedBy.Count = 0",
+    "FixExpression": "Delete()",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "AVOID_DUPLICATE_MEASURES",
+    "Name": "[M-23] Eviter les mesures en double (avec les mêmes définitions)",
+    "Category": "Maintenabilité",
+    "Description": "Les mesures avec des noms différents et définies par la même expression DAX doivent être évitées pour réduire la redondance.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "Model.AllMeasures.Any(Expression.Replace(\" \",\"\").Replace(\"\\n\",\"\").Replace(\"\\r\",\"\").Replace(\"\\t\",\"\") = outerIt.Expression.Replace(\" \",\"\").Replace(\"\\n\",\"\").Replace(\"\\r\",\"\").Replace(\"\\t\",\"\") and it <> outerIt)",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "AVOID_INVALID_NAME_CHARACTERS",
+    "Name": "[M-24] Eviter les caractères invalides dans les noms",
+    "Category": "Maintenabilité",
+    "Description": "Cette règle identifie si un nom pour un objet donné contient un caractère non valide. Les caractères non valides entraînent une erreur lors du déploiement du modèle et un échec du déploiement. Cette règle a une expression fixe qui convertit le caractère invalide en espace, résolvant le problème.",
+    "Severity": 2,
+    "Scope": "Table, Measure, Hierarchy, Level, Perspective, Partition, DataColumn, CalculatedColumn, CalculatedTable, CalculatedTableColumn, KPI, ModelRole, CalculationGroup, CalculationItem",
+    "Expression": "Name.ToCharArray().Any(char.IsControl(it) and !char.IsWhiteSpace(it))",
+    "FixExpression": "Name = string.Concat( it.Name.ToCharArray().Select( c => (char.IsControl(c) && !char.IsWhiteSpace(c)) ? ' ': c ))",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "AVOID_INVALID_DESCRIPTION_CHARACTERS",
+    "Name": "[M-25] Eviter les caractères invalides dans les descriptions",
+    "Category": "Maintenabilité",
+    "Description": "Cette règle identifie si une description d'un objet donné contient un caractère non valide. Les caractères non valides entraînent une erreur lors du déploiement du modèle et un échec du déploiement. Cette règle a une expression fixe qui convertit le caractère invalide en espace, résolvant le problème.",
+    "Severity": 2,
+    "Scope": "Table, Measure, Hierarchy, Level, Perspective, Partition, DataColumn, CalculatedColumn, CalculatedTable, CalculatedTableColumn, KPI, ModelRole, CalculationGroup, CalculationItem",
+    "Expression": "Description.ToCharArray().Any(char.IsControl(it) and !char.IsWhiteSpace(it))",
+    "FixExpression": "Description = string.Concat( it.Description.ToCharArray().Select( c => (char.IsControl(c) && !char.IsWhiteSpace(c)) ? ' ': c ))",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "EXPRESSION_RELIANT_OBJECTS_MUST_HAVE_AN_EXPRESSION",
+    "Name": "[M-26] Les objets dépendant d'une expression doivent en avoir une",
+    "Category": "Maintenabilité",
+    "Description": "Les colonnes calculées, les éléments de calcul et les mesures doivent avoir une expression. Sans expression, ces objets n'afficheront aucune valeur.",
+    "Severity": 2,
+    "Scope": "Measure, CalculatedColumn, CalculationItem",
+    "Expression": "string.IsNullOrWhiteSpace(Expression)",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "SPECIAL_CHARACTERS_IN_OBJECT_NAMES",
+    "Name": "[M-27] Les noms des objets ne doivent pas contenir des caractères spéciaux",
+    "Category": "Maintenabilité",
+    "Description": "Tabulations, sauts de ligne, etc.",
+    "Severity": 2,
+    "Scope": "Model, Table, Measure, Hierarchy, Perspective, Partition, DataColumn, CalculatedColumn, CalculatedTable, CalculatedTableColumn, CalculationGroup, CalculationItem",
+    "Expression": "Name.IndexOf(char(9)) > -1\r\nor\r\n\nName.IndexOf(char(10)) > -1 \r\nor\r\n\nName.IndexOf(char(13)) > -1",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "TRIM_OBJECT_NAMES",
+    "Name": "[M-28] Supprimer les espaces supplémentaires dans les noms des objets",
+    "Category": "Maintenabilité",
+    "Description": "Laisser involontairement un espace à la fin d'un nom d'objet est un phénomène courant lors de la copie ou la duplication d'objets depuis Tabular Editor.",
+    "Severity": 2,
+    "Scope": "Model, Table, Measure, Hierarchy, Level, Perspective, Partition, ProviderDataSource, DataColumn, CalculatedColumn, CalculatedTable, CalculatedTableColumn, StructuredDataSource, NamedExpression, ModelRole, CalculationGroup, CalculationItem",
+    "Expression": "Name.StartsWith(\" \") or Name.EndsWith(\" \")",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "EVALUATEANDLOG_SHOULD_NOT_BE_USED_IN_PRODUCTION_MODELS",
+    "Name": "[M-29] La fonction EVALUATEANDLOG ne doit pas être utilisée dans des environnements de production",
+    "Category": "Maintenabilité",
+    "Description": "La fonction EVALUATEANDLOG est destinée à être utilisée uniquement dans des environnements de développement et de test et ne doit pas être utilisée dans des modèles de production.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "RegEx.IsMatch(Expression,\"(?i)EVALUATEANDLOG\\s*\\(\")",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "FORMAT_FLAG_COLUMNS_AS_YES/NO_VALUE_STRINGS",
+    "Name": "[M-30] Mettre en forme les colonnes de type 'flag' en tant que chaînes de valeur Oui/Non",
+    "Category": "Maintenabilité",
+    "Description": "Les 'flags' doivent être correctement formatés en Oui/Non car cela est plus facile à lire que d'utiliser des valeurs entières 0/1.",
+    "Severity": 2,
+    "Scope": "DataColumn, CalculatedColumn, CalculatedTableColumn",
+    "Expression": "(\nName.StartsWith(\"Is\") and \nDataType = \"Int64\" and \nnot (IsHidden or Table.IsHidden)\n) \r\nor\r\n\n(\nName.EndsWith(\" Flag\") and \nDataType <> \"String\" and \nnot (IsHidden or Table.IsHidden)\n)",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "REMOVE_DATA_SOURCES_NOT_REFERENCED_BY_ANY_PARTITIONS",
+    "Name": "[M-31] Supprimer les sources de données qui ne sont référencées par aucune partition",
+    "Category": "Maintenabilité",
+    "Description": "Les sources de données qui ne sont référencées par aucune partition peuvent être supprimées.",
+    "Severity": 1,
+    "Scope": "ProviderDataSource, StructuredDataSource",
+    "Expression": "UsedByPartitions.Count() == 0\r\nand not Model.Tables.Any(SourceExpression.Contains(OuterIt.Name))\r\nand not Model.AllPartitions.Any(Query.Contains(OuterIt.Name))",
+    "FixExpression": "Delete()",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "ORGANIZE_MEASURES_IN_FOLDERS",
+    "Name": "[U-01] Organiser les mesures dans des dossiers",
+    "Category": "UX/UI",
+    "Description": "Les tables avec plus de 5 mesures visibles doivent être allégées et les mesures doivent être organisées dans des dossiers d'affichage pour une meilleure utilisation.",
+    "Severity": 2,
+    "Scope": "Table",
+    "Expression": "Measures.Count(IsVisible and string.IsNullOrEmpty(DisplayFolder)) > 5",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "SORT_MONTH_(AS_A_STRING)_BY_MONTH_NUMBER_COLUMN",
+    "Name": "[U-02] Trier le mois (en tant que chaîne de caractères) par la colonne de numéro du mois",
+    "Category": "UX/UI",
+    "Description": "Cette règle met en évidence les colonnes de mois qui sont des chaînes de caractères et ne sont pas triées. Si elles ne sont pas déjà triées, elles le seront par ordre alphabétique (c'est-à-dire Avril, Août...). Assurez-vous de trier ces colonnes afin qu'elles le soient faites correctement (Janvier, Février, Mars...).",
+    "Severity": 2,
+    "Scope": "DataColumn, CalculatedColumn, CalculatedTableColumn",
+    "Expression": "Name.ToUpper().Contains(\"MOIS\") and \r\n\n\nDataType == DataType.String \r\nand \r\nSortByColumn == null",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "ENSURE_THAT_OBJECTS_DO_NOT_START_OR_END_WITH_A_SPACE",
+    "Name": "[U-03] S'assurer que les objets ne commencent pas et ne se terminent pas par un espace",
+    "Category": "UX/UI",
+    "Description": "Les objets ne doivent pas commencer ou se terminer par un espace.",
+    "Severity": 2,
+    "Scope": "Model, Table, Measure, Hierarchy, Perspective, Partition, DataColumn, CalculatedColumn",
+    "Expression": "Name.StartsWith(\" \") or Name.EndsWith(\" \")",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "FORMAT_INTEGERS_WITH_THOUSANDS_SEPARATORS_AND_NO_DECIMALS",
+    "Name": "[U-04] Formater les nombres entiers avec des séparateurs de milliers et sans décimales",
+    "Category": "UX/UI",
+    "Severity": 3,
+    "Scope": "Measure",
+    "Expression": "not FormatString.Contains(\"€\") and not FormatString.Contains(\"%\") and not (FormatString = \"#,0\" or FormatString = \"#,0.0\")",
+    "FixExpression": "FormatString = \"#,0\"",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "FORMAT_PERCENTAGES_WITH_THOUSANDS_SEPARATORS_AND_ONE_DECIMAL",
+    "Name": "[U-05] Formater les pourcentages avec des séparateurs de milliers et une décimale",
+    "Category": "UX/UI",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "FormatString.Contains(\"%\") and FormatString <> \"#,0.0%;-#,0.0%;#,0.0%\"",
+    "FixExpression": "FormatString = \"#,0.0%\\u003B-#,0.0%\\u003B#,0.0%\"",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "PROVIDE_FORMAT_STRING_FOR_DATE_COLUMNS",
+    "Name": "[U-06] Fournir une chaîne de format pour les colonnes de date",
+    "Category": "UX/UI",
+    "Description": "Les colonnes de type \"DateHeure\" dont le nom contient \"Mois\" doivent être au format \"dd/mm/yyyy\".",
+    "Severity": 2,
+    "Scope": "DataColumn, CalculatedColumn, CalculatedTableColumn",
+    "Expression": "Name.IndexOf(\"Date\", \"OrdinalIgnoreCase\") >= 0 \r\nand\r\nDataType = \"DateTime\" \r\nand \r\nFormatString = \"mm/dd/yyyy\"",
+    "FixExpression": "FormatString = \"dd/mm/yyyy\"",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "PROVIDE_FORMAT_STRING_FOR_VISIBLE_NUMERIC_TYPE_COLUMNS",
+    "Name": "[U-07] Fournir une chaîne de format pour les colonnes numériques visibles",
+    "Category": "UX/UI",
+    "Description": "Les colonnes numériques visibles doivent avoir leur propriété de chaîne de format affectée.",
+    "Severity": 2,
+    "Scope": "DataColumn, CalculatedColumn, CalculatedTableColumn",
+    "Expression": "IsVisible\nand string.IsNullOrWhitespace(FormatString)\nand (DataType = \"Int64\" or DataType = \"DateTime\" or DataType = \"Double\" or DataType = \"Decimal\")\n",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "PROVIDE_FORMAT_STRING_FOR_VISIBLE_NUMERIC_TYPE_MEASURES",
+    "Name": "[U-08] Fournir une chaîne de format pour les mesures numériques visibles",
+    "Category": "UX/UI",
+    "Description": "Les mesures numériques visibles doivent avoir leur propriété de chaîne de format affectée.",
+    "Severity": 2,
+    "Scope": "Measure",
+    "Expression": "IsVisible\nand string.IsNullOrWhitespace(FormatString)\nand (DataType = \"Int64\" or DataType = \"DateTime\" or DataType = \"Double\" or DataType = \"Decimal\")",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "ENSURE_THAT_COLUMNS_AND_HIERARCHIES_NAMES_START_WITH_AN_UPPERCASE_LETTER",
+    "Name": "[U-09] S'assurer que les noms des colonnes et des hiérarchies commencent par une lettre majuscule",
+    "Category": "UX/UI",
+    "Description": "Eviter d'utiliser des préfixes et du CamelCase. Utiliser \"Ventes\" au lieu de \"dimVentes\" ou \"mVentes\".",
+    "Severity": 2,
+    "Scope": "DataColumn, CalculatedColumn, CalculatedTableColumn",
+    "Expression": "IsVisible\nand char.IsLower(Name[0])\nand (Model.Cultures.Count = 0 or TranslatedNames.Any(it = \"\" or it = outerIt.Name))",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "ENSURE_THAT_MEASURES_AND_TABLES_NAMES_START_WITH_AN_UPPERCASE_LETTER",
+    "Name": "[U-10] S'assurer que les noms des mesures et des tables commencent par une lettre majuscule",
+    "Category": "UX/UI",
+    "Description": "Éviter d'utiliser des préfixes et du CamelCase. Utiliser \"Ventes\" au lieu de \"dimVentes\" ou \"mVentes\".",
+    "Severity": 1,
+    "Scope": "Table, Measure, CalculatedTable",
+    "Expression": "IsVisible\nand char.IsLower(Name[0])\nand (Model.Cultures.Count = 0 or TranslatedNames.Any(it = \"\" or it = outerIt.Name))\n",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "NO_CAMELCASE_COLUMNS_HIERARCHIES",
+    "Name": "[U-11] Éviter le CamelCase sur les colonnes et les hiérarchies visibles",
+    "Category": "UX/UI",
+    "Description": "Les colonnes et les hiérarchies visibles ne doivent pas utiliser du CamelCase dans leurs noms, à moins que des traductions ne soient appliquées.",
+    "Severity": 1,
+    "Scope": "Hierarchy, DataColumn, CalculatedColumn, CalculatedTableColumn",
+    "Expression": "IsVisible \nand RegEx.IsMatch(Name, \"[A-Z]([A-Z0-9]*[a-z][a-z0-9]*[A-Z]|[a-z0-9]*[A-Z][A-Z0-9]*[a-z])[A-Za-z0-9]*\") \nand not Name.Contains(\" \") \nand (Model.Cultures.Count = 0 or TranslatedNames.Any(it = \"\" or it = outerIt.Name))",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "NO_CAMELCASE_MEASURES_TABLES",
+    "Name": "[U-12] Éviter le CamelCase sur les mesures et tables visibles",
+    "Category": "UX/UI",
+    "Description": "Les mesures et les tables visibles ne doivent pas utiliser de CamelCase dans leurs noms, à moins que des traductions ne soient appliquées.",
+    "Severity": 1,
+    "Scope": "Table, Measure, CalculatedTable",
+    "Expression": "IsVisible \nand RegEx.IsMatch(Name, \"[A-Z]([A-Z0-9]*[a-z][a-z0-9]*[A-Z]|[a-z0-9]*[A-Z][A-Z0-9]*[a-z])[A-Za-z0-9]*\") \nand not Name.Contains(\" \") \nand (Model.Cultures.Count = 0 or TranslatedNames.Any(it = \"\" or it = outerIt.Name))",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "ENSURE_THAT_RELATIONSHIP_COLUMN_NAMES_ARE_IDENTICAL",
+    "Name": "[U-13] S'assurer que les noms des colonnes dans les relations sont identiques",
+    "Category": "UX/UI",
+    "Description": "Lorsqu'une relation unique existe entre deux tables, les colonnes des deux côtés de la relation doivent porter le même nom. Lorsque plusieurs relations existent entre deux tables, le nom de FromColumn doit se terminer par le nom de ToColumn (par exemple OrderDateKey, ShipDateKey, DueDateKey, etc.).",
+    "Severity": 2,
+    "Scope": "Relationship",
+    "Expression": "(Model.Relationships.Count(FromTable = OuterIt.FromTable and ToTable = OuterIt.ToTable) = 1 and FromColumn.Name <> ToColumn.Name) or\n(Model.Relationships.Count(FromTable = OuterIt.FromTable and ToTable = OuterIt.ToTable) > 1 and not FromColumn.Name.EndsWith(ToColumn.Name))",
+    "CompatibilityLevel": 1200
+  }
+]
